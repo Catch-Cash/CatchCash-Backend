@@ -19,6 +19,7 @@
   "homepage": "https://github.com/Catch-Cash/CatchCash-Backend#readme",
   "dependencies": {
     "express": "^4.17.1",
+    "http-errors": "^1.8.0",
     "morgan": "^1.10.0",
     "mysql2": "^2.1.0",
     "nodemon": "^2.0.4",
