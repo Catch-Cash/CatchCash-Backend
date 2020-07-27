@@ -19,3 +19,9 @@ app.set('jwt-secret', config.secret);
 app.listen(port, () => {
     console.log(`Express server is running at ${port}`);
 });
+
+process.once("SIGUSR2", function() {
+  server.close(function() {
+    process.kill(process.pid, "SIGUSR2");
+  });
+});
