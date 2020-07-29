@@ -1,9 +1,9 @@
 {
   "development": {
-    "username": "root",
-    "password": "1234",
+    "username": "admin",
+    "password": "catchcash",
     "database": "catchcash",
-    "host": "127.0.0.1",
+    "host": "catchcash.ctacnk0lszte.ap-northeast-2.rds.amazonaws.com",
     "dialect": "mysql"
   },
   "test": {
