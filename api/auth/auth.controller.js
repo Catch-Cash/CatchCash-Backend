@@ -12,7 +12,7 @@ const authorize = (req,res)=>{
       qs:{
         response_type:"code",
         client_id: config.client_id,
-        redirect_uri: "http://localhost:1212/authorize/callback",
+        redirect_uri: "http://192.168.43.226:1212/authorize/callback",
         scope: "login inquiry transfer",
         state: "12345678901234567890122345689012"
       }
@@ -35,13 +35,15 @@ const authorize_callback = async (req,res)=>{
         code:req.query.code,
         client_id: config.client_id,
         client_secret:config.client_secret,
-        redirect_uri: "http://localhost:1212/authorize/callback",
+        redirect_uri: "http://192.168.43.226:1212/authorize/callback",
         grant_type: 'authorization_code'  
       }
     };
   
     request.post(option,async (err,response,body)=>{
       const accessTokenRequestResult = JSON.parse(body);
+      console.log(body);
+      console.log(accessTokenRequestResult);
       const user = User.findOne({where:{user_seq_no:accessTokenRequestResult.user_seq_no}});
       if(!user.dataValues){
         User.create({
@@ -96,6 +98,7 @@ const logout = async (req,res)=>{
   
     request.post(option,(err,response,body)=>{
       const res_body = JSON.parse(body);
+      console.log(body);
       if(!res_body.api_tran_id) res.json({message:"failed logout"})
       else res.json({message: "success logout"});
     });
@@ -122,10 +125,13 @@ const secession = async (req,res)=>{
       }
     };
     request.post(option,async(err,response,body)=>{
-      await User.destroy({where:{user_seq_no:user_seq_no}});
       const res_body = JSON.parse(body);
-      if(!res_body.api_tran_id) res.json({message:"failed logout"})
-      else res.json({message: "success secession"});
+      console.log(body); 
+      if(!res_body.api_tran_id) res.json({message:"failed logout"});
+      else{
+        await User.destroy({where:{user_seq_no:user_seq_no}});
+        res.json({message: "success secession"});
+      } 
     });
   }catch(e){
     res.status(400).json(e.message).end();
@@ -136,5 +142,5 @@ module.exports = {
   authorize,
   authorize_callback,
   logout,
-  secession
+  secession,
 }
