@@ -24,7 +24,7 @@ const authorize = (req, res) => {
       qs: {
         response_type: "code",
         client_id: config.client_id,
-        redirect_uri: "http://localhost:1212/authorize/callback",
+        redirect_uri: "http://192.168.137.229:1212/authorize/callback",
         scope: "login inquiry transfer",
         state: "12345678901234567890122345689012"
       }
@@ -62,27 +62,24 @@ const authorize_callback = async (req, res) => {
         code: req.query.code,
         client_id: config.client_id,
         client_secret: config.client_secret,
-        redirect_uri: "http://localhost:1212/authorize/callback",
+        redirect_uri: "http://192.168.137.229:1212/authorize/callback",
         grant_type: "authorization_code"
       }
     };
 
     request.post(option, async (err, response, body) => {
       const accessTokenRequestResult = JSON.parse(body);
-      const user = User.findOne({
+      const user = await User.findOne({
         where: { user_seq_no: accessTokenRequestResult.user_seq_no }
       });
 
-      if (!user.dataValues) {
+      if (!user) {
         User.create({
           user_seq_no: accessTokenRequestResult.user_seq_no,
           access_token: accessTokenRequestResult.access_token,
           refresh_token: accessTokenRequestResult.refresh_token
-        }).catch(e => {
-          throw new Error(e.message);
         });
       } else {
-        console.log(123);
         User.update(
           {
             access_token: accessTokenRequestResult.access_token,
@@ -167,10 +164,15 @@ const secession = async (req, res) => {
       }
     };
     request.post(option, async (err, response, body) => {
-      await User.destroy({ where: { user_seq_no: user_seq_no } });
       const res_body = JSON.parse(body);
-      if (!res_body.api_tran_id) res.json({ message: "failed logout" });
-      else res.json({ message: "success secession" });
+      console.log(res_body);
+
+      if (res_body.api_tran_id != "A0000")
+        res.json({ message: "failed logout" });
+      else {
+        await User.destroy({ where: { user_seq_no: user_seq_no } });
+        res.json({ message: "success secession" });
+      }
     });
   } catch (e) {
     res
