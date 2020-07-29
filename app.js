@@ -11,6 +11,12 @@ sequelize.sync();
 
 const port = process.env.PORT;
 
+// process.once("SIGUSR2", function() {
+//   server.close(function() {
+//     process.kill(process.pid, "SIGUSR2");
+//   });
+// });
+
 app.use(express.json());
 app.use(morgan("dev"));
 app.use("/", api);
