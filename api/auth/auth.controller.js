@@ -125,17 +125,18 @@ const logout = async (req, res) => {
     const option = {
       uri: "https://testapi.openbanking.or.kr/v2.0/user/unlink",
       headers: {
-        Authorization: `Bearer ${user.dataValues.access_token}`
+        Authorization: `Bearer ${user.access_token}`
       },
-      form: {
+      body: {
         client_use_code: "T991634670",
         user_seq_no: user.dataValues.user_seq_no
-      }
+      },
+      json: true
     };
 
     request.post(option, (err, response, body) => {
-      const res_body = JSON.parse(body);
-      if (!res_body.api_tran_id) res.json({ message: "failed logout" });
+      const res_body = body;
+      if (res_body.rsp_code != "A0000") res.json({ message: "failed logout" });
       else res.json({ message: "success logout" });
     });
   } catch (e) {
@@ -156,19 +157,18 @@ const secession = async (req, res) => {
     const option = {
       uri: "https://testapi.openbanking.or.kr/v2.0/user/close",
       headers: {
-        Authorization: `Bearer ${user.dataValues.access_token}`
+        Authorization: `Bearer ${user.access_token}`
       },
-      form: {
+      body: {
         client_use_code: "T991634670",
-        user_seq_no: user.dataValues.user_seq_no
-      }
+        user_seq_no: user.user_seq_no
+      },
+      json: true
     };
     request.post(option, async (err, response, body) => {
-      const res_body = JSON.parse(body);
-      console.log(res_body);
+      const res_body = body;
 
-      if (res_body.api_tran_id != "A0000")
-        res.json({ message: "failed logout" });
+      if (res_body.rsp_code != "A0000") res.json({ message: "failed logout" });
       else {
         await User.destroy({ where: { user_seq_no: user_seq_no } });
         res.json({ message: "success secession" });

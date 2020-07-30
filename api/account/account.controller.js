@@ -1,13 +1,17 @@
 const request = require("request");
 const models = require("../../models");
 
-const requestToOB = options => {
+const requestToOB = (options, bool) => {
   return new Promise(function(resolve, reject) {
     request(options, (err, res, body) => {
       if (err) {
+        console.log("err" + err);
         reject(err);
       } else {
-        resolve(JSON.parse(body));
+        // console.log(res);
+
+        if (bool) resolve(body);
+        else resolve(JSON.parse(body));
       }
     });
   });
@@ -43,69 +47,49 @@ const makeRandomString = () => {
 };
 
 const getAccountList = async (req, res) => {
-  // const user_seq_no = req.decoded.user_seq_no;
+  const user_seq_no = req.decoded.user_seq_no;
 
-  // console.log(user_seq_no);
   try {
-    //   const access_token = await models.User.findOne({
-    //     where: {
-    //       user_seq_no
-    //     },
-    //     attributes: ["access_token"]
-    //   });
+    const user = await models.User.findOne({
+      where: {
+        user_seq_no
+      }
+    });
+    const access_token = user.access_token;
 
-    const access_token =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMTAwNzYwNjY3Iiwic2NvcGUiOlsiaW5xdWlyeSIsImxvZ2luIiwidHJhbnNmZXIiXSwiaXNzIjoiaHR0cHM6Ly93d3cub3BlbmJhbmtpbmcub3Iua3IiLCJleHAiOjE2MDM3MTU0MjksImp0aSI6ImMyOWJjYzZlLWFjNDgtNGJmNy04OThlLTVhZTQyOTE3OGIxZSJ9.AOPrL2kcA9o5szwAfeXeyk0JEq6ox_I2NskaXo7Y5b8";
-    // "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX3NlcV9ubyI6IjExMDA3NjEwNDQiLCJpYXQiOjE1OTU5ODM4NDIsImV4cCI6MTU5NjM0Mzg0MiwiaXNzIjoiZ2tydWQiLCJzdWIiOiJ1c2VyX2luZm8ifQ.0BEE2D-dYOSFQdO6diCnunqipWwrRF802ox7rkVNwyg";
-    let fintechNumList = await getFintechNumList(access_token);
+    let fintechNumList = await getFintechNumList(access_token, user_seq_no);
     let account_list = [];
 
-    await getLastestTransactions(fintechNumList);
-
     const getAccountInfo = async () => {
-      const currentTimeInfo = getCurrentDate();
-
       for (let i in fintechNumList) {
-        const options = {
-          headers: {
-            Authorization: `Bearer ${access_token}`
+        const transactionList = await models.Transaction.findAll({
+          where: {
+            user_seq_no,
+            fintech_use_num: fintechNumList[i].fintech_use_num
           },
-          uri:
-            "https://testapi.openbanking.or.kr/v2.0/account/transaction_list/fin_num",
-          qs: {
-            bank_tran_id: "T991634670U" + makeRandomString(),
-            fintech_use_num: fintechNumList[i].fintech_use_num,
-            inquiry_type: "A",
-            inquiry_base: "D",
-            from_date: 20200101,
-            to_date:
-              currentTimeInfo.year +
-              currentTimeInfo.month +
-              currentTimeInfo.date,
-            sort_order: "D",
-            tran_dtime:
-              currentTimeInfo.year +
-              currentTimeInfo.month +
-              currentTimeInfo.date +
-              currentTimeInfo.hours +
-              currentTimeInfo.minutes +
-              currentTimeInfo.seconds
-          },
-          method: "GET"
-        };
-
-        const response = await requestToOB(options);
+          order: [
+            ["tran_date", "DESC"],
+            ["tran_time", "DESC"]
+          ],
+          attributes: ["label", "tran_amt", "after_balance_amt"]
+        });
 
         const info = {
           fintech_use_num: fintechNumList[i].fintech_use_num,
           account_alias: fintechNumList[i].account_alias,
-          bank_name: fintechNumList[i].bank_name,
-          balance_amt: response.balance_amt,
-          transaction_list: response.res_list
-            ? response.res_list.slice(0, 3)
-            : []
+          bank_name: fintechNumList[i].bank_name
         };
 
+        if (transactionList[0]) {
+          info.balance_amt = transactionList[0].after_balance_amt;
+          info.transaction_list = transactionList.slice(0, 3).map(i => ({
+            tran_amt: i.tran_amt,
+            label: i.label
+          }));
+        } else {
+          info.balance_amt = "0";
+          info.transaction_list = [];
+        }
         account_list.push(info);
       }
     };
@@ -123,26 +107,27 @@ const changeAccountName = async (req, res) => {
   try {
     const user_seq_no = req.decoded.user_seq_no;
 
-    const access_token = await models.User.findOne({
+    const user = await models.User.findOne({
       where: {
         user_seq_no
-      },
-      attributes: ["access_token"]
+      }
     });
+    const access_token = user.access_token;
 
     const options = {
       headers: {
-        Authorization: access_token
+        Authorization: `Bearer ${access_token}`
       },
       uri: "https://testapi.openbanking.or.kr/v2.0/account/update_info",
-      form: {
+      body: {
         account_alias: req.body.account_alias,
         fintech_use_num: req.body.fintech_use_num
       },
+      json: true,
       method: "POST"
     };
 
-    await request(options, function(err, res, body) {});
+    await requestToOB(options, true);
 
     res.json({ message: "success" });
   } catch (e) {
@@ -154,38 +139,58 @@ const getTransactions = async (req, res) => {
   try {
     const user_seq_no = req.decoded.user_seq_no;
 
-    const access_token = await models.User.findOne({
+    const user = await models.User.findOne({
       where: {
         user_seq_no
-      },
-      attributes: ["access_token"]
+      }
     });
 
-    const getFintechUseNum = async () => {
-      if (req.params.fintech_use_num) {
-        return [req.params.fintech_use_num];
-      } else {
-        const options = {
-          headers: {
-            Authorization: access_token
-          },
-          uri: "https://testapi.openbanking.or.kr/v2.0/account/list",
-          qs: {
-            user_seq_no,
-            include_cancel_yn: "N",
-            sort_order: "D"
-          },
-          method: "GET"
-        };
+    const fintechNumList = req.params.fintech_use_num
+      ? [req.params.fintech_use_num]
+      : await getFintechNumList(user.access_token, user_seq_no);
 
-        await request(options, function(err, res, body) {
-          if (err) console.log(err);
-          else return body.res_list.map(i => i.fintech_use_num);
-        });
+    let transactions = await models.Transaction.findAll({
+      where: {
+        fintech_use_num: fintechNumList.map(i => i.fintech_use_num)
+      },
+      order: [
+        ["tran_date", "DESC"],
+        ["tran_time", "DESC"]
+      ],
+      attributes: [
+        "tran_amt",
+        "print_content",
+        "tran_date",
+        "label",
+        "description",
+        "fintech_use_num",
+        "id"
+      ]
+    });
+
+    const matchAccountAlias = fintech_use_num => {
+      for (let i in fintechNumList) {
+        if (fintech_use_num === fintechNumList[i].fintech_use_num)
+          return fintechNumList[i].account_alias;
       }
     };
 
-    getLastTransactions(getFintechUseNum());
+    transactions = transactions
+      .map(i => ({
+        tran_amt: i.tran_amt,
+        print_content: i.print_content,
+        tran_date: i.tran_date,
+        label: i.label,
+        description: i.description,
+        account_alias: matchAccountAlias(i.fintech_use_num),
+        id: i.id
+      }))
+      .slice((req.query.page_num - 1) * 10, req.query.page_num * 10);
+
+    res.json({
+      transaction_list: transactions,
+      next_page_yn: "y"
+    });
   } catch (e) {}
 };
 
@@ -207,7 +212,7 @@ const modifyTransaction = async (req, res) => {
   } catch (e) {}
 };
 
-const getFintechNumList = async access_token => {
+const getFintechNumList = async (access_token, user_seq_no) => {
   try {
     let fintechNumList = [];
 
@@ -217,7 +222,7 @@ const getFintechNumList = async access_token => {
       },
       uri: "https://testapi.openbanking.or.kr/v2.0/account/list",
       qs: {
-        user_seq_no: "1100760667",
+        user_seq_no,
         include_cancel_yn: "N",
         sort_order: "D"
       },
@@ -240,87 +245,115 @@ const getFintechNumList = async access_token => {
   }
 };
 
-const getLastestTransactions = async fintechNumList => {
-  const currentTimeInfo = getCurrentDate();
+const test = async () => {
+  let id = 1;
 
-  const user_seq_no = 1100760667;
-  const access_token =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMTAwNzYwNjY3Iiwic2NvcGUiOlsiaW5xdWlyeSIsImxvZ2luIiwidHJhbnNmZXIiXSwiaXNzIjoiaHR0cHM6Ly93d3cub3BlbmJhbmtpbmcub3Iua3IiLCJleHAiOjE2MDM3MTU0MjksImp0aSI6ImMyOWJjYzZlLWFjNDgtNGJmNy04OThlLTVhZTQyOTE3OGIxZSJ9.AOPrL2kcA9o5szwAfeXeyk0JEq6ox_I2NskaXo7Y5b8";
+  let amt1 = 500000;
 
-  for (let i in fintechNumList) {
-    let lastestDate = await models.Transaction.findOne({
-      where: {
-        user_seq_no
-      },
-      order: [["createdAt", "DESC"]],
-      attributes: ["tran_date", "tran_time"]
-    });
+  const data1 = [
+    {
+      tran_date: 20200101,
+      tran_time: 010101,
+      inout_type: "입금",
+      print_content: "ㅁㄴㅇㄹ",
+      description: "ㅁㄴㅇ",
+      tran_amt: 1800000,
+      branch_name: "ㄱ",
+      label: 0
+    },
+    {
+      tran_date: 20200101,
+      tran_time: 010501,
+      inout_type: "입금",
+      print_content: "ㄴㅇㄹㄴㄹ",
+      description: "ㄴㅇㅇㄹ",
+      tran_amt: 10000,
+      branch_name: "ㄱ",
+      label: 0
+    },
+    {
+      tran_date: 20200101,
+      tran_time: 030101,
+      inout_type: "출금",
+      print_content: "ㅁㅎㅇㄴ",
+      description: "ㅇㄹㄴ",
+      tran_amt: 100000,
+      branch_name: "ㄱ",
+      label: 0
+    },
+    {
+      tran_date: 20200102,
+      tran_time: 010101,
+      inout_type: "출금",
+      print_content: "ㅁㄴㅇㄹ",
+      description: "ㅁㄴㅇ",
+      tran_amt: 5000,
+      branch_name: "ㄱ",
+      label: 0
+    },
+    {
+      tran_date: 20200102,
+      tran_time: 020101,
+      inout_type: "출금",
+      print_content: "ㅁㄴㅇㄹ",
+      description: "ㅁㄴㅇ",
+      tran_amt: 5000,
+      branch_name: "ㄱ",
+      label: 0
+    },
+    {
+      tran_date: 20200103,
+      tran_time: 030101,
+      inout_type: "출금",
+      print_content: "ㅁㄴㅇㄹ",
+      description: "ㅁㄴㅇ",
+      tran_amt: 20000,
+      branch_name: "ㄱ",
+      label: 0
+    },
+    {
+      tran_date: 20200103,
+      tran_time: 040101,
+      inout_type: "입금",
+      print_content: "ㅁㄴㅇㄹ",
+      description: "ㅁㄴㅇ",
+      tran_amt: 20000,
+      branch_name: "ㄱ",
+      label: 0
+    },
+    {
+      tran_date: 20200103,
+      tran_time: 050101,
+      inout_type: "출금",
+      print_content: "ㅁㄴㅇㄹ",
+      description: "ㅁㄴㅇ",
+      tran_amt: 5000,
+      branch_name: "ㄱ",
+      label: 0
+    },
+    {
+      tran_date: 20200103,
+      tran_time: 060101,
+      inout_type: "출금",
+      print_content: "ㅁㄴㅇㄹ",
+      description: "ㅁㄴㅇ",
+      tran_amt: 10000,
+      branch_name: "ㄱ",
+      label: 0
+    }
+  ];
 
-    if (lastestDate === null)
-      lastestDate = { tran_date: "20200101", tran_time: "010101" };
+  data1.map(i => {
+    i.user_seq_no = "1100760786";
+    i.fintech_use_num = "199163467057884420762003";
+    i.id = id++;
+    i.inout_type === "출금" ? amt1 - i.tran_amt : amt1 + i.tran_amt;
+    i.after_balance_amt = amt1;
+  });
 
-    console.log("lastestDate", lastestDate);
-
-    let isNextPageExist = true;
-
-    // while (isNextPageExist) {
-    let options = {
-      headers: {
-        Authorization: `Bearer ${access_token}`
-      },
-      uri:
-        "https://testapi.openbanking.or.kr/v2.0/account/transaction_list/fin_num",
-      qs: {
-        bank_tran_id: "T991634670U" + makeRandomString(),
-        fintech_use_num: fintechNumList[i].fintech_use_num,
-        inquiry_type: "A",
-        inquiry_base: "T",
-        from_date: lastestDate.tran_date,
-        from_time: lastestDate.tran_time,
-        to_date:
-          currentTimeInfo.year + currentTimeInfo.month + currentTimeInfo.date,
-        to_time:
-          currentTimeInfo.hours +
-          currentTimeInfo.minutes +
-          currentTimeInfo.seconds,
-        sort_order: "A",
-        tran_dtime:
-          currentTimeInfo.year +
-          currentTimeInfo.month +
-          currentTimeInfo.date +
-          currentTimeInfo.hours +
-          currentTimeInfo.minutes +
-          currentTimeInfo.seconds,
-        before_inquiry_trance_info: "sdfasdasdfdfsdfdsfsd"
-      }
-    };
-
-    const response = await requestToOB(options);
-
-    isNextPageExist = response.next_page_yn === "Y";
-
-    console.log(response);
-
-    // console.log(isNextPageExist, response.before_inquiry_trance_info);
-    // before_inquiry_trance_info = response.before_inquiry_trance_info;
-    await response.res_list.forEach(item => {
-      models.Transaction.create({
-        user_seq_no,
-        fintech_use_num: fintechNumList[i].fintech_use_num,
-        tran_date: item.tran_date,
-        tran_time: item.tran_time,
-        inout_type: item.inout_type,
-        print_content: item.print_content,
-        description: item.description,
-        tran_amt: item.tran_amt,
-        after_balance_amt: item.after_balance_amt,
-        branch_name: item.branch_name,
-        label: 0,
-        transaction_id: null
-      });
-    });
-    // }
-  }
+  await data1.forEach(item => {
+    models.Transaction.create(item);
+  });
 };
 
 module.exports = {
@@ -328,5 +361,5 @@ module.exports = {
   changeAccountName,
   getTransactions,
   modifyTransaction,
-  getLastestTransactions
+  test
 };
