@@ -2,7 +2,7 @@ const request = require("request");
 const models = require("../../models");
 
 const requestToOB = (options, bool) => {
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     request(options, (err, res, body) => {
       if (err) {
         console.log("err" + err);
@@ -20,7 +20,7 @@ const requestToOB = (options, bool) => {
 const getCurrentDate = () => {
   const currentTime = new Date();
 
-  const checkFormat = num => {
+  const checkFormat = (num) => {
     if (num < 10) return `0${num}`;
     else return num;
   };
@@ -31,7 +31,7 @@ const getCurrentDate = () => {
     date: checkFormat(currentTime.getDate()).toString(),
     hours: checkFormat(currentTime.getHours()).toString(),
     minutes: checkFormat(currentTime.getMinutes()).toString(),
-    seconds: checkFormat(currentTime.getSeconds()).toString()
+    seconds: checkFormat(currentTime.getSeconds()).toString(),
   };
 };
 
@@ -52,8 +52,8 @@ const getAccountList = async (req, res) => {
   try {
     const user = await models.User.findOne({
       where: {
-        user_seq_no
-      }
+        user_seq_no,
+      },
     });
     const access_token = user.access_token;
 
@@ -65,26 +65,26 @@ const getAccountList = async (req, res) => {
         const transactionList = await models.Transaction.findAll({
           where: {
             user_seq_no,
-            fintech_use_num: fintechNumList[i].fintech_use_num
+            fintech_use_num: fintechNumList[i].fintech_use_num,
           },
           order: [
             ["tran_date", "DESC"],
-            ["tran_time", "DESC"]
+            ["tran_time", "DESC"],
           ],
-          attributes: ["label", "tran_amt", "after_balance_amt"]
+          attributes: ["label", "tran_amt", "after_balance_amt"],
         });
 
         const info = {
           fintech_use_num: fintechNumList[i].fintech_use_num,
           account_alias: fintechNumList[i].account_alias,
-          bank_name: fintechNumList[i].bank_name
+          bank_name: fintechNumList[i].bank_name,
         };
 
         if (transactionList[0]) {
           info.balance_amt = transactionList[0].after_balance_amt;
-          info.transaction_list = transactionList.slice(0, 3).map(i => ({
+          info.transaction_list = transactionList.slice(0, 3).map((i) => ({
             tran_amt: i.tran_amt,
-            label: i.label
+            label: i.label,
           }));
         } else {
           info.balance_amt = "0";
@@ -109,25 +109,27 @@ const changeAccountName = async (req, res) => {
 
     const user = await models.User.findOne({
       where: {
-        user_seq_no
-      }
+        user_seq_no,
+      },
     });
     const access_token = user.access_token;
 
     const options = {
       headers: {
-        Authorization: `Bearer ${access_token}`
+        Authorization: `Bearer ${access_token}`,
       },
       uri: "https://testapi.openbanking.or.kr/v2.0/account/update_info",
       body: {
         account_alias: req.body.account_alias,
-        fintech_use_num: req.body.fintech_use_num
+        fintech_use_num: req.body.fintech_use_num,
       },
       json: true,
-      method: "POST"
+      method: "POST",
     };
+    console.log(options.body);
 
-    await requestToOB(options, true);
+    const response = await requestToOB(options, true);
+    console.log(response);
 
     res.json({ message: "success" });
   } catch (e) {
@@ -141,8 +143,8 @@ const getTransactions = async (req, res) => {
 
     const user = await models.User.findOne({
       where: {
-        user_seq_no
-      }
+        user_seq_no,
+      },
     });
 
     const fintechNumList = req.params.fintech_use_num
@@ -151,11 +153,11 @@ const getTransactions = async (req, res) => {
 
     let transactions = await models.Transaction.findAll({
       where: {
-        fintech_use_num: fintechNumList.map(i => i.fintech_use_num)
+        fintech_use_num: fintechNumList.map((i) => i.fintech_use_num),
       },
       order: [
         ["tran_date", "DESC"],
-        ["tran_time", "DESC"]
+        ["tran_time", "DESC"],
       ],
       attributes: [
         "tran_amt",
@@ -164,11 +166,11 @@ const getTransactions = async (req, res) => {
         "label",
         "description",
         "fintech_use_num",
-        "id"
-      ]
+        "id",
+      ],
     });
 
-    const matchAccountAlias = fintech_use_num => {
+    const matchAccountAlias = (fintech_use_num) => {
       for (let i in fintechNumList) {
         if (fintech_use_num === fintechNumList[i].fintech_use_num)
           return fintechNumList[i].account_alias;
@@ -176,20 +178,20 @@ const getTransactions = async (req, res) => {
     };
 
     transactions = transactions
-      .map(i => ({
+      .map((i) => ({
         tran_amt: i.tran_amt,
         print_content: i.print_content,
         tran_date: i.tran_date,
         label: i.label,
         description: i.description,
         account_alias: matchAccountAlias(i.fintech_use_num),
-        id: i.id
+        id: i.id,
       }))
       .slice((req.query.page_num - 1) * 10, req.query.page_num * 10);
 
     res.json({
       transaction_list: transactions,
-      next_page_yn: "y"
+      next_page_yn: "y",
     });
   } catch (e) {}
 };
@@ -203,7 +205,7 @@ const modifyTransaction = async (req, res) => {
       print_content: req.body.print_content,
       label: req.body.label,
       description: req.body.description,
-      transaction_id: req.body.transaction_id
+      transaction_id: req.body.transaction_id,
     };
 
     await models.Transaction.update(infoToUpdate);
@@ -218,25 +220,25 @@ const getFintechNumList = async (access_token, user_seq_no) => {
 
     const options = {
       headers: {
-        Authorization: `Bearer ${access_token}`
+        Authorization: `Bearer ${access_token}`,
       },
       uri: "https://testapi.openbanking.or.kr/v2.0/account/list",
       qs: {
         user_seq_no,
         include_cancel_yn: "N",
-        sort_order: "D"
+        sort_order: "D",
       },
-      method: "GET"
+      method: "GET",
     };
 
     const response = await requestToOB(options);
 
     console.log(response);
 
-    fintechNumList = response.res_list.map(i => ({
+    fintechNumList = response.res_list.map((i) => ({
       fintech_use_num: i.fintech_use_num,
       account_alias: i.account_alias,
-      bank_name: i.bank_name
+      bank_name: i.bank_name,
     }));
 
     return fintechNumList;
@@ -252,107 +254,143 @@ const test = async () => {
 
   const data1 = [
     {
-      tran_date: 20200101,
+      tran_date: 20200105,
       tran_time: 010101,
       inout_type: "입금",
       print_content: "ㅁㄴㅇㄹ",
       description: "ㅁㄴㅇ",
       tran_amt: 1800000,
       branch_name: "ㄱ",
-      label: 0
+      label: 0,
     },
     {
-      tran_date: 20200101,
+      tran_date: 20200105,
       tran_time: 010501,
       inout_type: "입금",
       print_content: "ㄴㅇㄹㄴㄹ",
       description: "ㄴㅇㅇㄹ",
       tran_amt: 10000,
       branch_name: "ㄱ",
-      label: 0
+      label: 0,
     },
     {
-      tran_date: 20200101,
+      tran_date: 20200105,
       tran_time: 030101,
       inout_type: "출금",
       print_content: "ㅁㅎㅇㄴ",
       description: "ㅇㄹㄴ",
       tran_amt: 100000,
       branch_name: "ㄱ",
-      label: 0
+      label: 0,
     },
     {
-      tran_date: 20200102,
+      tran_date: 20200106,
       tran_time: 010101,
       inout_type: "출금",
       print_content: "ㅁㄴㅇㄹ",
       description: "ㅁㄴㅇ",
       tran_amt: 5000,
       branch_name: "ㄱ",
-      label: 0
+      label: 0,
     },
     {
-      tran_date: 20200102,
+      tran_date: 20200106,
       tran_time: 020101,
       inout_type: "출금",
       print_content: "ㅁㄴㅇㄹ",
       description: "ㅁㄴㅇ",
       tran_amt: 5000,
       branch_name: "ㄱ",
-      label: 0
+      label: 0,
     },
     {
-      tran_date: 20200103,
+      tran_date: 20200107,
       tran_time: 030101,
       inout_type: "출금",
       print_content: "ㅁㄴㅇㄹ",
       description: "ㅁㄴㅇ",
       tran_amt: 20000,
       branch_name: "ㄱ",
-      label: 0
+      label: 0,
     },
     {
-      tran_date: 20200103,
+      tran_date: 20200107,
       tran_time: 040101,
       inout_type: "입금",
       print_content: "ㅁㄴㅇㄹ",
       description: "ㅁㄴㅇ",
       tran_amt: 20000,
       branch_name: "ㄱ",
-      label: 0
+      label: 0,
     },
     {
-      tran_date: 20200103,
+      tran_date: 20200107,
       tran_time: 050101,
       inout_type: "출금",
       print_content: "ㅁㄴㅇㄹ",
       description: "ㅁㄴㅇ",
       tran_amt: 5000,
       branch_name: "ㄱ",
-      label: 0
+      label: 0,
     },
     {
-      tran_date: 20200103,
+      tran_date: 20200107,
       tran_time: 060101,
       inout_type: "출금",
       print_content: "ㅁㄴㅇㄹ",
       description: "ㅁㄴㅇ",
       tran_amt: 10000,
       branch_name: "ㄱ",
-      label: 0
-    }
+      label: 0,
+    },
   ];
 
-  data1.map(i => {
+  data1.map((i) => {
     i.user_seq_no = "1100760786";
-    i.fintech_use_num = "199163467057884420762003";
-    i.id = id++;
+    i.fintech_use_num = "199163467057884420994485";
     i.inout_type === "출금" ? amt1 - i.tran_amt : amt1 + i.tran_amt;
     i.after_balance_amt = amt1;
   });
 
-  await data1.forEach(item => {
+  await data1.forEach((item) => {
     models.Transaction.create(item);
+  });
+  res.json({ message: "success" });
+};
+
+const getAccountList_test = async (req, res) => {
+  const user = await models.User.findOne({
+    where: { user_seq_no: req.decoded.user_seq_no },
+  });
+
+  const currentDate = getCurrentDate();
+
+  const option = {
+    uri:
+      "https://testapi.openbanking.or.kr/v2.0/account/transaction_list/fin_num",
+    headers: {
+      Authorization: `Bearer ${user.access_token}`,
+    },
+    qs: {
+      bank_tran_id: "T991634670U" + makeRandomString(),
+      fintech_use_num: "199163467057884420995156",
+      inquiry_type: "A",
+      inquiry_base: "D",
+      from_data: "20200101",
+      to_date: "20200730",
+      sort_order: "D",
+      tran_dtime:
+        currentDate.year +
+        currentDate.month +
+        currentDate.date +
+        currentDate.hours +
+        currentDate.minutes +
+        currentDate.seconds,
+    },
+  };
+  request.get(option, (err, response, body) => {
+    console.log(body);
+    res.json(body);
   });
 };
 
@@ -361,5 +399,6 @@ module.exports = {
   changeAccountName,
   getTransactions,
   modifyTransaction,
-  test
+  test,
+  getAccountList_test,
 };

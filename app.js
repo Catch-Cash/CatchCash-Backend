@@ -9,7 +9,7 @@ const api = require("./api");
 const app = express();
 sequelize.sync();
 
-const port = process.env.PORT;
+const port = 1212;
 
 // process.once("SIGUSR2", function() {
 //   server.close(function() {

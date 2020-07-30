@@ -13,5 +13,5 @@ router.get(
 );
 router.patch("/account/list", middleware, controller.modifyTransaction);
 router.get("/test", controller.test);
-
+router.get("/accountList", middleware, controller.getAccountList_test);
 module.exports = router;
