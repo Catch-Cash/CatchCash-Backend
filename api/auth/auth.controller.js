@@ -24,7 +24,7 @@ const authorize = (req, res) => {
       qs: {
         response_type: "code",
         client_id: config.client_id,
-        redirect_uri: "http://192.168.137.229:1212/authorize/callback",
+        redirect_uri: "http://3.34.188.92:1212/authorize/callback",
         scope: "login inquiry transfer",
         state: "12345678901234567890122345689012"
       }
