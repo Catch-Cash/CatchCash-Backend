@@ -17,35 +17,6 @@ const requestToOB = (options, bool) => {
   });
 };
 
-const getCurrentDate = () => {
-  const currentTime = new Date();
-
-  const checkFormat = (num) => {
-    if (num < 10) return `0${num}`;
-    else return num;
-  };
-
-  return {
-    year: checkFormat(currentTime.getFullYear()).toString(),
-    month: checkFormat(currentTime.getMonth() + 1).toString(),
-    date: checkFormat(currentTime.getDate()).toString(),
-    hours: checkFormat(currentTime.getHours()).toString(),
-    minutes: checkFormat(currentTime.getMinutes()).toString(),
-    seconds: checkFormat(currentTime.getSeconds()).toString(),
-  };
-};
-
-const makeRandomString = () => {
-  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZ";
-  const string_length = 9;
-  let randomstring = "";
-  for (let i = 0; i < string_length; i++) {
-    const rnum = Math.floor(Math.random() * chars.length);
-    randomstring += chars.substring(rnum, rnum + 1);
-  }
-  return randomstring;
-};
-
 const getAccountList = async (req, res) => {
   const user_seq_no = req.decoded.user_seq_no;
 
@@ -131,7 +102,9 @@ const changeAccountName = async (req, res) => {
     const response = await requestToOB(options, true);
     console.log(response);
 
-    res.json({ message: "success" });
+    if (response.rsp_code != "A0000")
+      res.status(500).json({ message: "failed" });
+    else res.json({ message: "success" });
   } catch (e) {
     console.log(e);
   }
@@ -148,8 +121,9 @@ const getTransactions = async (req, res) => {
     });
 
     const fintechNumList = req.params.fintech_use_num
-      ? [req.params.fintech_use_num]
+      ? [{ fintech_use_num: req.params.fintech_use_num }]
       : await getFintechNumList(user.access_token, user_seq_no);
+    const compareList = await getFintechNumList(user.access_token, user_seq_no);
 
     let transactions = await models.Transaction.findAll({
       where: {
@@ -177,11 +151,11 @@ const getTransactions = async (req, res) => {
       }
     };
 
-    transactions = transactions
-      .map((i) => ({
+    const transactionsInPage = transactions
+      .map(i => ({
         tran_amt: i.tran_amt,
         print_content: i.print_content,
-        tran_date: i.tran_date,
+        tran_date: i.tran_date.toString(),
         label: i.label,
         description: i.description,
         account_alias: matchAccountAlias(i.fintech_use_num),
@@ -190,25 +164,25 @@ const getTransactions = async (req, res) => {
       .slice((req.query.page_num - 1) * 10, req.query.page_num * 10);
 
     res.json({
-      transaction_list: transactions,
-      next_page_yn: "y",
+      transaction_list: transactionsInPage,
+      next_page_yn: transactions[req.query.page_num * 10 + 1] ? "y" : "n"
     });
   } catch (e) {}
 };
 
 const modifyTransaction = async (req, res) => {
   try {
-    const user_seq_no = req.decoded.user_seq_no;
-
     const infoToUpdate = {
-      user_seq_no,
       print_content: req.body.print_content,
       label: req.body.label,
-      description: req.body.description,
-      transaction_id: req.body.transaction_id,
+      description: req.body.description
     };
 
-    await models.Transaction.update(infoToUpdate);
+    await models.Transaction.update(infoToUpdate, {
+      where: {
+        id: req.body.id
+      }
+    }).catch(e => console.log(e));
 
     res.json({ message: "success cash_list change" });
   } catch (e) {}
@@ -233,9 +207,7 @@ const getFintechNumList = async (access_token, user_seq_no) => {
 
     const response = await requestToOB(options);
 
-    console.log(response);
-
-    fintechNumList = response.res_list.map((i) => ({
+    fintechNumList = response.res_list.map(i => ({
       fintech_use_num: i.fintech_use_num,
       account_alias: i.account_alias,
       bank_name: i.bank_name,
@@ -248,8 +220,6 @@ const getFintechNumList = async (access_token, user_seq_no) => {
 };
 
 const test = async () => {
-  let id = 1;
-
   let amt1 = 500000;
 
   const data1 = [
@@ -347,7 +317,7 @@ const test = async () => {
 
   data1.map((i) => {
     i.user_seq_no = "1100760786";
-    i.fintech_use_num = "199163467057884420994485";
+    i.fintech_use_num = "199163467057884420997386";
     i.inout_type === "출금" ? amt1 - i.tran_amt : amt1 + i.tran_amt;
     i.after_balance_amt = amt1;
   });

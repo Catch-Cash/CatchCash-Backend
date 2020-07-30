@@ -130,8 +130,11 @@ const logout = async (req, res) => {
 
     request.post(option, (err, response, body) => {
       const res_body = body;
-      if (res_body.rsp_code != "A0000") res.json({ message: "failed logout" });
-      else res.json({ message: "success logout" });
+      if (res_body.rsp_code != "A0000") {
+        console.log(body);
+
+        res.status(500).json({ message: "failed logout" });
+      } else res.json({ message: "success logout" });
     });
   } catch (e) {
     res.status(400).json(e.message).end();
@@ -168,7 +171,12 @@ const secession = async (req, res) => {
       }
     });
   } catch (e) {
-    res.status(400).json(e.message).end();
+    console.log(e);
+
+    res
+      .status(400)
+      .json(e.message)
+      .end();
   }
 };
 
