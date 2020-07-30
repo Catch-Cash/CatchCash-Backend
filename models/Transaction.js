@@ -23,8 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       tran_amt: DataTypes.INTEGER,
       after_balance_amt: DataTypes.STRING,
       branch_name: DataTypes.STRING,
-      label: DataTypes.INTEGER,
-      transaction_id: DataTypes.INTEGER
+      label: DataTypes.INTEGER
     },
     {
       sequelize,
