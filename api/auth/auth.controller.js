@@ -26,8 +26,8 @@ const authorize = (req, res) => {
         client_id: config.client_id,
         redirect_uri: "http://192.168.137.229:1212/authorize/callback",
         scope: "login inquiry transfer",
-        state: "12345678901234567890122345689012",
-      },
+        state: "12345678901234567890122345689012"
+      }
     };
 
     // const option = {
@@ -46,7 +46,10 @@ const authorize = (req, res) => {
       res.json({ url: response.request.url.href });
     });
   } catch (e) {
-    res.status(400).json(e).end();
+    res
+      .status(400)
+      .json(e)
+      .end();
   }
 };
 
@@ -59,31 +62,31 @@ const authorize_callback = async (req, res) => {
         code: req.query.code,
         client_id: config.client_id,
         client_secret: config.client_secret,
-        redirect_uri: "http://192.168.137.229:1212/authorize/callback",
-        grant_type: "authorization_code",
-      },
+        redirect_uri: "http://3.34.188.92:1212/authorize/callback",
+        grant_type: "authorization_code"
+      }
     };
 
     request.post(option, async (err, response, body) => {
       const accessTokenRequestResult = JSON.parse(body);
       const user = await User.findOne({
-        where: { user_seq_no: accessTokenRequestResult.user_seq_no },
+        where: { user_seq_no: accessTokenRequestResult.user_seq_no }
       });
 
       if (!user) {
         User.create({
           user_seq_no: accessTokenRequestResult.user_seq_no,
           access_token: accessTokenRequestResult.access_token,
-          refresh_token: accessTokenRequestResult.refresh_token,
+          refresh_token: accessTokenRequestResult.refresh_token
         });
       } else {
         User.update(
           {
             access_token: accessTokenRequestResult.access_token,
-            refresh_token: accessTokenRequestResult.refresh_token,
+            refresh_token: accessTokenRequestResult.refresh_token
           },
           {
-            where: { user_seq_no: accessTokenRequestResult.user_seq_no },
+            where: { user_seq_no: accessTokenRequestResult.user_seq_no }
           }
         );
       }
@@ -95,17 +98,20 @@ const authorize_callback = async (req, res) => {
         {
           expiresIn: "100h",
           issuer: "gkrud",
-          subject: "user_info",
+          subject: "user_info"
         }
       );
 
       res.json({
         access_token: token,
-        refresh_token: accessTokenRequestResult.refresh_token,
+        refresh_token: accessTokenRequestResult.refresh_token
       });
     });
   } catch (e) {
-    res.status(400).json(e.message).end();
+    res
+      .status(400)
+      .json(e.message)
+      .end();
   }
 };
 
@@ -113,19 +119,19 @@ const logout = async (req, res) => {
   try {
     const user_seq_no = req.decoded.user_seq_no;
     const user = await User.findOne({
-      where: { user_seq_no: user_seq_no },
+      where: { user_seq_no: user_seq_no }
     });
 
     const option = {
       uri: "https://testapi.openbanking.or.kr/v2.0/user/unlink",
       headers: {
-        Authorization: `Bearer ${user.access_token}`,
+        Authorization: `Bearer ${user.access_token}`
       },
       body: {
         client_use_code: "T991634670",
-        user_seq_no: user.dataValues.user_seq_no,
+        user_seq_no: user.dataValues.user_seq_no
       },
-      json: true,
+      json: true
     };
 
     request.post(option, (err, response, body) => {
@@ -137,7 +143,10 @@ const logout = async (req, res) => {
       } else res.json({ message: "success logout" });
     });
   } catch (e) {
-    res.status(400).json(e.message).end();
+    res
+      .status(400)
+      .json(e.message)
+      .end();
   }
 };
 
@@ -145,19 +154,19 @@ const secession = async (req, res) => {
   try {
     const user_seq_no = req.decoded.user_seq_no;
     const user = await User.findOne({
-      where: { user_seq_no: user_seq_no },
+      where: { user_seq_no: user_seq_no }
     });
     if (!user) throw new Error("no exist user");
     const option = {
       uri: "https://testapi.openbanking.or.kr/v2.0/user/close",
       headers: {
-        Authorization: `Bearer ${user.access_token}`,
+        Authorization: `Bearer ${user.access_token}`
       },
       body: {
         client_use_code: "T991634670",
-        user_seq_no: user.user_seq_no,
+        user_seq_no: user.user_seq_no
       },
-      json: true,
+      json: true
     };
     request.post(option, async (err, response, body) => {
       const res_body = body;
@@ -184,5 +193,5 @@ module.exports = {
   authorize,
   authorize_callback,
   logout,
-  secession,
+  secession
 };
