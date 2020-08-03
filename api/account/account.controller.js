@@ -118,14 +118,11 @@ const getTransactions = async (req, res) => {
       }
     });
 
-    const fintechNumList = req.params.fintech_use_num
-      ? [{ fintech_use_num: req.params.fintech_use_num }]
-      : await getFintechNumList(user.access_token, user_seq_no);
     const compareList = await getFintechNumList(user.access_token, user_seq_no);
 
     let transactions = await models.Transaction.findAll({
       where: {
-        fintech_use_num: fintechNumList.map(i => i.fintech_use_num)
+        user_seq_no
       },
       order: [
         ["tran_date", "DESC"],
@@ -168,17 +165,25 @@ const getTransactions = async (req, res) => {
 
 const modifyTransaction = async (req, res) => {
   try {
-    const infoToUpdate = {
-      print_content: req.body.print_content,
-      label: req.body.label,
-      description: req.body.description
-    };
+    // const infoToUpdate = {
+    //   print_content: req.body.print_content,
+    //   label: req.body.label,
+    //   description: req.body.description
+    // };
+    // console.log(infoToUpdate);
 
-    await models.Transaction.update(infoToUpdate, {
-      where: {
-        id: req.body.id
+    await models.Transaction.update(
+      {
+        print_content: req.body.print_content,
+        label: req.body.label,
+        description: req.body.description
+      },
+      {
+        where: {
+          id: req.body.id
+        }
       }
-    }).catch(e => console.log(e));
+    ).catch(e => console.log(e));
 
     res.json({ message: "success cash_list change" });
   } catch (e) {}
