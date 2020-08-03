@@ -149,17 +149,15 @@ const getTransactions = async (req, res) => {
       }
     };
 
-    const transactionsInPage = transactions
-      .map(i => ({
-        tran_amt: i.tran_amt,
-        print_content: i.print_content,
-        tran_date: i.tran_date.toString(),
-        label: i.label,
-        description: i.description,
-        account_alias: matchAccountAlias(i.fintech_use_num),
-        id: i.id
-      }))
-      .slice((req.query.page_num - 1) * 10, req.query.page_num * 10);
+    const transactionsInPage = transactions.map(i => ({
+      tran_amt: i.tran_amt,
+      print_content: i.print_content,
+      tran_date: i.tran_date.toString(),
+      label: i.label,
+      description: i.description,
+      account_alias: matchAccountAlias(i.fintech_use_num),
+      id: i.id
+    }));
 
     res.json({
       transaction_list: transactionsInPage,
@@ -218,7 +216,7 @@ const getFintechNumList = async (access_token, user_seq_no) => {
 };
 
 const test = async () => {
-  let amt1 = 500000;
+  let amt1 = 3000000;
 
   const data1 = [
     {
@@ -229,7 +227,7 @@ const test = async () => {
       description: "ㅁㄴㅇ",
       tran_amt: 1800000,
       branch_name: "ㄱ",
-      label: 0
+      label: 9
     },
     {
       tran_date: 20200105,
@@ -239,7 +237,7 @@ const test = async () => {
       description: "ㄴㅇㅇㄹ",
       tran_amt: 10000,
       branch_name: "ㄱ",
-      label: 0
+      label: 9
     },
     {
       tran_date: 20200105,
@@ -289,7 +287,7 @@ const test = async () => {
       description: "ㅁㄴㅇ",
       tran_amt: 20000,
       branch_name: "ㄱ",
-      label: 0
+      label: 9
     },
     {
       tran_date: 20200107,
@@ -315,7 +313,7 @@ const test = async () => {
 
   data1.map(i => {
     i.user_seq_no = "1100761044";
-    i.fintech_use_num = "199163467057884420995156";
+    i.fintech_use_num = "199163467057884420917269";
     i.after_balance_amt = (() => {
       if (i.inout_type.includes("출금")) amt1 -= i.tran_amt;
       else amt1 += i.tran_amt;
