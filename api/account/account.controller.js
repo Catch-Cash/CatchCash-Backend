@@ -52,6 +52,8 @@ const getAccountList = async (req, res) => {
         };
 
         if (transactionList[0]) {
+          console.log(transactionList[0].after_balance_amt);
+
           info.balance_amt = transactionList[0].after_balance_amt;
           info.transaction_list = transactionList.slice(0, 3).map(i => ({
             tran_amt: i.tran_amt,
@@ -117,12 +119,14 @@ const getTransactions = async (req, res) => {
         user_seq_no
       }
     });
-
+    const fintechNumList = req.params.fintech_use_num
+      ? [{ fintech_use_num: req.params.fintech_use_num }]
+      : await getFintechNumList(user.access_token, user_seq_no);
     const compareList = await getFintechNumList(user.access_token, user_seq_no);
 
     let transactions = await models.Transaction.findAll({
       where: {
-        user_seq_no
+        fintech_use_num: fintechNumList.map(i => i.fintech_use_num)
       },
       order: [
         ["tran_date", "DESC"],
@@ -318,7 +322,7 @@ const test = async () => {
 
   data1.map(i => {
     i.user_seq_no = "1100761044";
-    i.fintech_use_num = "199163467057884420917269";
+    i.fintech_use_num = "199163467057884420909803";
     i.after_balance_amt = (() => {
       if (i.inout_type.includes("출금")) amt1 -= i.tran_amt;
       else amt1 += i.tran_amt;
